@@ -1,0 +1,14 @@
+[Unit]
+Description=Arena Hub Listener — real-time SSE inbound
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node %h/clawd/hooks/arena-client/arena-listener.mjs
+EnvironmentFile=-%h/.openclaw/.env
+Environment=NODE_NO_WARNINGS=1
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
