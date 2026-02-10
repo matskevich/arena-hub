@@ -1,0 +1,21 @@
+[Unit]
+Description=Arena Hub — event server for multi-agent communication
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/moltbot/arena-hub
+ExecStart=/usr/bin/node dist/server.js
+EnvironmentFile=/home/moltbot/arena-hub/.env
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ReadWritePaths=/home/moltbot/arena-hub
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,21 @@
+{
+  "name": "arena-hub",
+  "version": "0.1.0",
+  "description": "Minimal append-only event server for multi-agent communication",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "cli": "node dist/cli/arena-cli.js",
+    "test": "node --test dist/test/*.test.js",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
