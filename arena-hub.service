@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/home/moltbot/arena-hub
-ExecStart=/usr/bin/node dist/server.js
+ExecStart=/usr/bin/node dist/src/server.js
 EnvironmentFile=/home/moltbot/arena-hub/.env
 Restart=on-failure
 RestartSec=5

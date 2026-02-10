@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/src/server.js",
     "cli": "node dist/cli/arena-cli.js",
     "test": "node --test dist/test/*.test.js",
     "dev": "tsc --watch"
