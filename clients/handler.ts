@@ -24,32 +24,35 @@ const CURSOR_DIR = join(HOME, ".arena-cursors");
 const WORKSPACE = process.env.OPENCLAW_WORKSPACE || join(HOME, "clawd");
 const INBOX_DIR = join(WORKSPACE, "arena-inbox");
 
-// --- bot identity mapping ---
-// ~/arena-hub/bots.json: { "7997448414": "sura", "8566320139": "panda" }
-// maps telegram bot ID → token name. each bot gets its own token file.
+// --- bot identity ---
+// one bot per VPS. identity from ~/arena-hub/.arena-author file.
+// token from ~/arena-hub/.arena-token-<name> (or fallback .arena-token)
 
-type BotMap = Record<string, string>;
-
-let botMap: BotMap | null = null;
-function getBotMap(): BotMap {
-  if (!botMap) {
-    try {
-      botMap = JSON.parse(readFileSync(join(ARENA_DIR, "bots.json"), "utf-8"));
-    } catch {
-      botMap = {};
-    }
+let cachedBotName: string | null = null;
+function getBotName(): string | null {
+  if (cachedBotName) return cachedBotName;
+  try {
+    cachedBotName = readFileSync(join(ARENA_DIR, ".arena-author"), "utf-8").trim();
+    return cachedBotName;
+  } catch {
+    return null;
   }
-  return botMap!;
 }
 
-// cache tokens per bot name
-const tokenCache: Record<string, string> = {};
-function getTokenForBot(botName: string): string | null {
-  if (tokenCache[botName]) return tokenCache[botName];
+let cachedToken: string | null = null;
+function getOutboundToken(): string | null {
+  if (cachedToken) return cachedToken;
+  const name = getBotName();
+  if (name) {
+    try {
+      cachedToken = readFileSync(join(ARENA_DIR, `.arena-token-${name}`), "utf-8").trim();
+      return cachedToken;
+    } catch { /* fall through */ }
+  }
+  // fallback: generic token
   try {
-    const t = readFileSync(join(ARENA_DIR, `.arena-token-${botName}`), "utf-8").trim();
-    tokenCache[botName] = t;
-    return t;
+    cachedToken = readFileSync(join(ARENA_DIR, ".arena-token"), "utf-8").trim();
+    return cachedToken;
   } catch {
     return null;
   }
@@ -67,10 +70,6 @@ function resolveRoom(event: MessageEvent): string | null {
   const resolved = match ? match[1] : groupId;
   if (!resolved || !resolved.startsWith("-")) return null;
   return `telegram:${resolved}`;
-}
-
-function resolveBotId(event: MessageEvent): string {
-  return String(event.context.botId ?? event.context.senderId ?? "");
 }
 
 // --- cursor per room ---
@@ -163,23 +162,19 @@ export default async function handler(event: MessageEvent): Promise<void> {
   if (!room) return;
 
   if (event.action === "sent") {
-    // per-bot outbound: resolve bot identity → use its token
-    const botId = resolveBotId(event);
-    const map = getBotMap();
-    const botName = map[botId];
-
+    const botName = getBotName();
     if (!botName) {
-      // unknown bot, skip to avoid misattribution
-      console.error(`[arena-client] skip outbound: unknown bot ${botId}`);
+      console.error("[arena-client] skip outbound: no .arena-author file");
       return;
     }
 
-    const token = getTokenForBot(botName);
+    const token = getOutboundToken();
     if (!token) {
       console.error(`[arena-client] skip outbound: no token for ${botName}`);
       return;
     }
 
+    console.error(`[arena-client] outbound: ${botName} -> ${room}`);
     await pushEvent(room, token, event);
   } else if (event.action === "received") {
     if (event.context.isBot) return;
