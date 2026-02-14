@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { Event, Token, AuditEntry } from './types.js';
+import { Event, Token, AuditEntry, Artifact } from './types.js';
 
 let db: Database.Database;
 
@@ -26,6 +26,19 @@ CREATE TABLE IF NOT EXISTS tokens (
   revoked_at TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f','now'))
 );
+
+CREATE TABLE IF NOT EXISTS artifacts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  author TEXT NOT NULL,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  metadata TEXT NOT NULL DEFAULT '{}',
+  token_id INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%f','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_artifacts_type ON artifacts(type);
+CREATE INDEX IF NOT EXISTS idx_artifacts_author ON artifacts(author);
 
 CREATE TABLE IF NOT EXISTS audit_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,6 +109,43 @@ export function listTokens(): Token[] {
 
 export function getToken(id: number): Token | undefined {
   return getDb().prepare('SELECT * FROM tokens WHERE id = ?').get(id) as Token | undefined;
+}
+
+// --- Artifacts ---
+
+export function insertArtifact(author: string, type: string, title: string, content: string, metadata: string, tokenId: number): Artifact {
+  const stmt = getDb().prepare(
+    'INSERT INTO artifacts (author, type, title, content, metadata, token_id) VALUES (?, ?, ?, ?, ?, ?)'
+  );
+  const result = stmt.run(author, type, title, content, metadata, tokenId);
+  return getDb().prepare('SELECT * FROM artifacts WHERE id = ?').get(result.lastInsertRowid) as Artifact;
+}
+
+export function getArtifact(id: number): Artifact | undefined {
+  return getDb().prepare('SELECT * FROM artifacts WHERE id = ?').get(id) as Artifact | undefined;
+}
+
+export function listArtifacts(type?: string, author?: string, limit = 50): Artifact[] {
+  let sql = 'SELECT id, author, type, title, metadata, token_id, created_at FROM artifacts';
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+
+  if (type) {
+    conditions.push('type = ?');
+    params.push(type);
+  }
+  if (author) {
+    conditions.push('author = ?');
+    params.push(author);
+  }
+
+  if (conditions.length > 0) {
+    sql += ' WHERE ' + conditions.join(' AND ');
+  }
+  sql += ' ORDER BY id DESC LIMIT ?';
+  params.push(limit);
+
+  return getDb().prepare(sql).all(...params) as Artifact[];
 }
 
 // --- Audit ---

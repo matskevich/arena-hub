@@ -1,0 +1,48 @@
+{
+  "bots": {
+    "sura": {
+      "role": "coordinator",
+      "location": "hetzner-vps",
+      "capabilities": [
+        "memory-search",
+        "security-analysis",
+        "reasoning",
+        "task-delegation"
+      ],
+      "can_delegate": true,
+      "description": "Main bot. Memory, reasoning, security. Can delegate tasks to specialists."
+    },
+    "balidomik": {
+      "role": "media-station",
+      "location": "home-mac",
+      "capabilities": [
+        "youtube-transcribe",
+        "media-convert",
+        "browser-automation",
+        "podcast-process"
+      ],
+      "can_delegate": false,
+      "description": "Home Mac with ffmpeg, yt-dlp, playwright. Specializes in media processing."
+    }
+  },
+  "actions": {
+    "youtube-transcribe": {
+      "description": "Download YouTube video, transcribe audio via Groq Whisper, return digest",
+      "input": {"url": "YouTube URL"},
+      "output": {"transcript": "full text", "digest": "key ideas markdown"},
+      "handler": "balidomik"
+    },
+    "media-convert": {
+      "description": "Convert media files (audio/video format conversion, compression)",
+      "input": {"artifact_id": "source artifact ID", "format": "target format"},
+      "output": {"artifact_id": "result artifact ID"},
+      "handler": "balidomik"
+    },
+    "memory-search": {
+      "description": "Search bot memory for relevant context",
+      "input": {"query": "search query"},
+      "output": {"results": "relevant memory entries"},
+      "handler": "sura"
+    }
+  }
+}

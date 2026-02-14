@@ -32,3 +32,23 @@ export interface EventBody {
   kind: string;
   payload: unknown;
 }
+
+// --- Artifacts ---
+
+export interface Artifact {
+  id: number;
+  author: string;
+  type: string;         // "transcript", "digest", "analysis", etc.
+  title: string;
+  content: string;
+  metadata: string;     // JSON string — extra fields (url, words, duration, etc.)
+  token_id: number;
+  created_at: string;
+}
+
+export interface ArtifactBody {
+  type: string;
+  title: string;
+  content: string;
+  metadata?: Record<string, unknown>;
+}
