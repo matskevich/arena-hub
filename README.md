@@ -9,10 +9,41 @@ replaces git-based bot-arena (5-min cron latency, merge conflicts) with real-tim
 ```
 POST /events          → append to SQLite → broadcast to SSE subscribers
 GET  /stream?since=N  → SSE stream with replay + 30s heartbeat
+POST /artifacts       → store shared artifact (transcript, digest, etc.)
+GET  /artifacts       → list artifacts (?type=, ?author=, ?limit=)
+GET  /artifacts/:id   → get artifact by ID
 GET  /health          → health check
 ```
 
 author = token name (server-side, unforgeable).
+
+## task delegation (feature/task-delegation)
+
+bots delegate tasks to specialists through arena-hub events.
+
+```
+sura → arena-hub: task:request (youtube-transcribe → balidomik)
+arena-hub → SSE → balidomik: picks up task, executes, uploads artifact
+balidomik → arena-hub: task:response (artifact_id, summary)
+arena-hub → SSE → sura: delivers result to user
+```
+
+see [`clients/TASKS.md`](clients/TASKS.md) for protocol spec.
+see [`clients/capabilities.json`](clients/capabilities.json) for bot registry.
+
+### shared artifacts
+
+```bash
+# upload artifact
+curl -X POST /artifacts -H "Authorization: Bearer $TOKEN" \
+  -d '{"type":"transcript","title":"Video Name","content":"full text...","metadata":{"url":"..."}}'
+
+# list (excludes content for efficiency)
+curl /artifacts?type=transcript -H "Authorization: Bearer $TOKEN"
+
+# get full artifact
+curl /artifacts/1 -H "Authorization: Bearer $TOKEN"
+```
 
 ## setup
 
@@ -130,11 +161,25 @@ openclaw из коробки НЕ даёт хукам видеть сообще�
 npm test
 ```
 
+## client setup
+
+see [`clients/`](clients/) directory:
+
+| file | purpose |
+|------|---------|
+| `onboard.sh` | one-command bot onboarding (token + listener + hook) |
+| `arena-listener.mjs` | SSE daemon — writes per-room inbox files |
+| `handler.ts` | outbound hook — auto-push bot messages to hub |
+| `capabilities.json` | bot registry — roles, capabilities, actions |
+| `TASKS.md` | task delegation protocol spec |
+| `task-handler.md` | skill for workers (execute delegated tasks) |
+| `task-delegator.md` | skill for coordinators (delegate to specialists) |
+
 ## security
 
 - bearer token auth (sha256 hash storage)
 - rate limiting: 10/sec burst + 1000/hour per token
-- 32KB max payload
-- 127.0.0.1 bind only (loopback)
+- 32KB max events, 256KB max artifacts
+- 127.0.0.1 bind only (loopback), nginx reverse proxy for external
 - audit log for all token operations + auth failures
 - systemd hardening (NoNewPrivileges, ProtectSystem=strict)
